@@ -67,16 +67,23 @@ template<typename FeatureTypeID,
 class AbstractCamera
 {
 public:
-    AbstractCamera(const std::basic_ostream<LogStreamCharType> *log_stream = nullptr);
-    virtual ~AbstractCamera();
+    AbstractCamera(std::basic_ostream<LogStreamCharType> *log_stream = nullptr):
+        _logStreamPtr(log_stream)
+    {
+    }
+
+    virtual ~AbstractCamera() {}
 
     virtual bool isInitialized() = 0;
 
-    void setLogStream(const std::basic_ostream<LogStreamCharType> *log_stream = nullptr);
+    void setLogStream(std::basic_ostream<LogStreamCharType> *log_stream = nullptr) {
+        _logStreamPtr = log_stream;
+    }
 
     template<typename ... Args>
     void logToFile(Args ...) {
         if ( !_logStreamPtr ) return;
+        logHelper(Args ...);
     }
 
 protected:
@@ -180,10 +187,23 @@ protected:
     class CameraCommand {
     public:
         CameraCommand(const CommandNameType name,
-                      const std::function<void()> exec_func);
+                      const std::function<void()> exec_func):
+            _name(name), _exec_func(exec_func)
+        {
+        }
 
-        CommandNameType name() const;
-        void exec();
+        CommandNameType name() const {
+            return _name;
+        }
+
+        void exec() {
+            if ( _exec_func ) {
+                _exec_func();
+            } else {
+                throw AbstractCameraException(Error_CommandExecFuncIsNULL, "Command exec function is NULL");
+            }
+        }
+
     protected:
         CommandNameType _name;
         std::function<void()> _exec_func;
@@ -231,7 +251,7 @@ public:     /*  PUBLIC MEMBERS AND METHODS OF AbstractCamera CLASS (continue) */
 
         _cameraFeatureToAccess = search_result->second.get();
 
-        return _cameraFeatureProxy;
+        return *_cameraFeatureProxy;
     }
 
 
@@ -243,13 +263,18 @@ protected:  /*  PROTECTED MEMBERS AND METHODS OF AbstractCamera CLASS */
         /*  features control members  */
 
     AbstractCameraFeature* _cameraFeatureToAccess;
-    FeatureProxyType _cameraFeatureProxy;
+    FeatureProxyType* _cameraFeatureProxy;
 
     camera_feature_map_t _cameraFeatures;
     camera_command_map_t _cameraCommands;
 
-    void defineFeature(AbstractCamera::AbstractCameraFeature *feature);
-    void defineCommand(AbstractCamera::CameraCommand *command);
+    void defineFeature(AbstractCameraFeature *feature) {
+        _cameraFeatures[feature->name()] = std::unique_ptr<AbstractCamera::AbstractCameraFeature>(feature);
+    }
+
+    void defineCommand(CameraCommand *command) {
+        _cameraCommands[command->name()] = std::unique_ptr<AbstractCamera::CameraCommand>(command);
+    }
 
 
         /*  helper methods for logging facility  */
@@ -262,31 +287,31 @@ protected:  /*  PROTECTED MEMBERS AND METHODS OF AbstractCamera CLASS */
 
     template<typename T>
     void logHelper(T arg) {
-        _logStreamPtr << arg;
+        *_logStreamPtr << arg;
     }
 
     void logHelper(){}
 
 };
 
-// macro to use in CPP-files for generic specialization
-#define ABS_CAM_MACRO(arg) \
-template<typename FeatureTypeID, \
-    typename FeatureNameType, \
-    typename FeatureAccessKeyType, \
-    typename FeatureProxyType, \
-    typename CommandNameType, \
-    typename CommandAccessKeyType, \
-    typename LogStreamCharType, \
-    typename ... FeatureTypes> \
-    arg AbstractCamera<FeatureTypeID, \
-                       FeatureNameType, \
-                       FeatureAccessKeyType, \
-                       FeatureProxyType, \
-                       CommandNameType, \
-                       CommandAccessKeyType, \
-                       LogStreamCharType, \
-                       FeatureTypes ...>
+//// macro to use in CPP-files for generic specialization
+//#define ABS_CAM_MACRO(arg) \
+//template<typename FeatureTypeID, \
+//    typename FeatureNameType, \
+//    typename FeatureAccessKeyType, \
+//    typename FeatureProxyType, \
+//    typename CommandNameType, \
+//    typename CommandAccessKeyType, \
+//    typename LogStreamCharType, \
+//    typename ... FeatureTypes> \
+//    arg AbstractCamera<FeatureTypeID, \
+//                       FeatureNameType, \
+//                       FeatureAccessKeyType, \
+//                       FeatureProxyType, \
+//                       CommandNameType, \
+//                       CommandAccessKeyType, \
+//                       LogStreamCharType, \
+//                       FeatureTypes ...>
 
 
 
@@ -300,14 +325,24 @@ class AbstractCameraException: public std::exception
 {
 public:
     AbstractCameraException(const AbstractCameraError error,
-                            const std::string &context);
+                            const std::string &context):
+        exception(), _error(error), _context(context)
+    {
+    }
 
     AbstractCameraException(const AbstractCameraError error,
-                            const char *context);
+                            const char *context):
+        AbstractCameraException(error, std::string(context))
+    {
+    }
 
-    AbstractCameraError error() const;
+    AbstractCameraError error() const {
+        return _error;
+    }
 
-    const char* what() const NOEXCEPT_DECL;
+    const char* what() const NOEXCEPT_DECL {
+        return _context.c_str();
+    }
 
 protected:
     AbstractCameraError _error;
