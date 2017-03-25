@@ -58,17 +58,18 @@ enum FeatureAccessType {ReadWrite_AccessType, ReadOnly_AccessType, WriteOnly_Acc
 
 template<typename FeatureTypeID,
          typename FeatureNameType,
-         typename FeatureAccessKeyType,
+//         typename FeatureAccessKeyType,
          typename FeatureProxyType,
          typename CommandNameType,
-         typename CommandAccessKeyType,
+//         typename CommandAccessKeyType,
          typename LogStreamCharType,
          typename ... FeatureTypes>
 class AbstractCamera
 {
 public:
     AbstractCamera(std::basic_ostream<LogStreamCharType> *log_stream = nullptr):
-        _logStreamPtr(log_stream)
+        _logStreamPtr(log_stream), _cameraFeatureToAccess(nullptr), _cameraFeatureProxy(nullptr),
+        _cameraFeatureValue(this)
     {
     }
 
@@ -80,10 +81,10 @@ public:
         _logStreamPtr = log_stream;
     }
 
-    template<typename ... Args>
-    void logToFile(Args ...) {
+    template<typename ... T>
+    void logToFile(T ... args) {
         if ( !_logStreamPtr ) return;
-        logHelper(Args ...);
+        logHelper(args ...);
     }
 
 protected:
@@ -118,7 +119,7 @@ protected:
 
                             /*  TYPEDEF TO HOLD FEATURE OBJECTS  */
 
-    typedef std::map<FeatureAccessKeyType,std::unique_ptr<AbstractCameraFeature>> camera_feature_map_t;
+    typedef std::map<FeatureNameType,std::unique_ptr<AbstractCameraFeature>> camera_feature_map_t;
 
                 /*  WORKING TEMPLATE CLASS DECLARATION FOR CAMERA FEATURES  */
 
@@ -212,8 +213,33 @@ protected:
 
                         /*  TYPEDEF TO HOLD COMMAND OBJECTS  */
 
-    typedef std::map<CommandAccessKeyType,std::unique_ptr<CameraCommand>> camera_command_map_t;
+    typedef std::map<CommandNameType,std::unique_ptr<CameraCommand>> camera_command_map_t;
 
+                        /*  PROXY  */
+
+    class CameraFeatureValue {
+    public:
+        CameraFeatureValue(AbstractCamera *camera): _camera(camera) {}
+        virtual ~CameraFeatureValue(){}
+
+        template<typename T, typename = typename std::enable_if< is_any<T,FeatureTypes ...>::value >::type>
+        operator T() {
+            return dynamic_cast<CameraFeature<T>*>(_camera->_cameraFeatureToAccess)->get();
+        }
+
+        template<typename T, typename = typename std::enable_if< is_any<T,FeatureTypes ...>::value >::type>
+        CameraFeatureValue & operator=(T &&val) {
+            CameraFeature<T>* f = dynamic_cast<CameraFeature<T>*>(_camera->_cameraFeatureToAccess);
+            f->set(val);
+            return *this;
+        }
+
+
+    protected:
+        AbstractCamera *_camera;
+    };
+
+    friend class CameraFeatureValue;
 
 
 public:     /*  PUBLIC MEMBERS AND METHODS OF AbstractCamera CLASS (continue) */
@@ -237,11 +263,17 @@ public:     /*  PUBLIC MEMBERS AND METHODS OF AbstractCamera CLASS (continue) */
 
     // operator to access camera features
 
-    FeatureProxyType & operator[](const FeatureNameType feature_name) {
+//    FeatureProxyType & operator[](const FeatureNameType feature_name) {
+    CameraFeatureValue & operator[](const FeatureNameType feature_name) {
         if ( !isInitialized() ) {
             throw AbstractCameraException(Error_UninitializedCameraState,
                                           "Try to access feature of uninitialized camera");
         }
+
+//        if ( _cameraFeatureProxy == nullptr ) {
+//            throw AbstractCameraException(Error_UninitializedCameraState,
+//                                          "Try to access feature of uninitialized camera");
+//        }
 
         auto search_result = _cameraFeatures.find(feature_name);
 
@@ -251,8 +283,12 @@ public:     /*  PUBLIC MEMBERS AND METHODS OF AbstractCamera CLASS (continue) */
 
         _cameraFeatureToAccess = search_result->second.get();
 
-        return *_cameraFeatureProxy;
+//        return *_cameraFeatureProxy;
+        return _cameraFeatureValue;
     }
+
+    template<typename T>
+    auto ff() -> decltype(CameraFeature<T>::get()) { }
 
 
 protected:  /*  PROTECTED MEMBERS AND METHODS OF AbstractCamera CLASS */
@@ -264,6 +300,8 @@ protected:  /*  PROTECTED MEMBERS AND METHODS OF AbstractCamera CLASS */
 
     AbstractCameraFeature* _cameraFeatureToAccess;
     FeatureProxyType* _cameraFeatureProxy;
+
+    CameraFeatureValue _cameraFeatureValue;
 
     camera_feature_map_t _cameraFeatures;
     camera_command_map_t _cameraCommands;
