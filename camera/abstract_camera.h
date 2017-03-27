@@ -66,11 +66,14 @@ template<typename FeatureTypeID,
          typename ... FeatureTypes>
 class AbstractCamera
 {
+    friend FeatureProxyType;
 public:
     AbstractCamera(std::basic_ostream<LogStreamCharType> *log_stream = nullptr):
         _logStreamPtr(log_stream), _cameraFeatureToAccess(nullptr),
-        _cameraFeatureValue(nullptr)
+//        _cameraFeatureValue(nullptr)
+        _cameraFeatureValue(this)
     {
+//        _cameraFeatureValue = new FeatureProxyType(this);
     }
 
     virtual ~AbstractCamera() {}
@@ -243,10 +246,10 @@ public:     /*  PUBLIC MEMBERS AND METHODS OF AbstractCamera CLASS (continue) */
                                           "Try to access feature of uninitialized camera");
         }
 
-        if ( _cameraFeatureValue == nullptr ) {
-            throw AbstractCameraException(Error_UninitializedCameraState,
-                                          "Try to access feature of uninitialized camera");
-        }
+//        if ( _cameraFeatureValue == nullptr ) {
+//            throw AbstractCameraException(Error_UninitializedCameraState,
+//                                          "Try to access feature of uninitialized camera");
+//        }
 
         auto search_result = _cameraFeatures.find(feature_name);
 
@@ -256,7 +259,8 @@ public:     /*  PUBLIC MEMBERS AND METHODS OF AbstractCamera CLASS (continue) */
 
         _cameraFeatureToAccess = search_result->second.get();
 
-        return *_cameraFeatureValue;
+//        return *_cameraFeatureValue;
+        return _cameraFeatureValue;
     }
 
 
@@ -269,7 +273,8 @@ protected:  /*  PROTECTED MEMBERS AND METHODS OF AbstractCamera CLASS */
         /*  features control members  */
 
     AbstractCameraFeature* _cameraFeatureToAccess;
-    FeatureProxyType *_cameraFeatureValue;
+//    FeatureProxyType *_cameraFeatureValue;
+    FeatureProxyType _cameraFeatureValue;
 
     camera_feature_map_t _cameraFeatures;
     camera_command_map_t _cameraCommands;

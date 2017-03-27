@@ -6,39 +6,56 @@
 
 using namespace std;
 
-class CAM;
-//enum CAM::ft;
-//class CAM::FP;
+class FP;
 enum ft {INTTYPE, FLOATTYPE, STRTYPE};
+
+//class CAM;
+typedef AbstractCamera<ft, std::string, FP, std::string, char, int, double, std::string> AC;
+
+
 class FP
 {
-    friend class CAM;
+//    friend class CAM;
+    template<typename,typename,typename,typename,typename,typename ...> friend class AbstractCamera;
 protected:
 //    FP() = delete;
 //public:
-    FP(CAM *cam = nullptr):_cam(cam) {}
+//    FP(CAM *cam = nullptr):_cam(cam) {}
+    FP(AC *cam = nullptr):_cam(cam) {}
 
 public:
     template<typename T, typename = typename std::enable_if<std::is_arithmetic<T>::value>::type>
     operator T() {
         switch ( _cam->_cameraFeatureToAccess->type() ) {
-
+        case INTTYPE: {
+//            CAM::CameraFeature<int> *f = dynamic_cast<CAM::CameraFeature<int>*>(_cam->_cameraFeatureToAccess);
+            AC::CameraFeature<int> *f = dynamic_cast<AC::CameraFeature<int>*>(_cam->_cameraFeatureToAccess);
+            return f->get();
+        }
+        case FLOATTYPE: {
+//            CAM::CameraFeature<double> *f = dynamic_cast<CAM::CameraFeature<double>*>(_cam->_cameraFeatureToAccess);
+            AC::CameraFeature<double> *f = dynamic_cast<AC::CameraFeature<double>*>(_cam->_cameraFeatureToAccess);
+            return f->get();
+        }
+        default: {
+            cerr << "ERROR!!!\n";
+        }
         }
     }
 
 private:
-    CAM *_cam;
+//    CAM *_cam;
+    AC *_cam;
 };
 
 //typedef AbstractCamera<ft, std::string, std::string, FP, std::string, std::string, char, int, double, std::string> AC;
-typedef AbstractCamera<ft, std::string, FP, std::string, char, int, double, std::string> AC;
 class CAM: public AC
 {
 public:
     enum LID {cam, api, bl};
 
     CAM(ostream* ls): AbstractCamera(ls), _aa(10) {
-        _cameraFeatureValue = new FP(this);
+//        _cameraFeatureValue = new FP(this);
         defineCommand(new CameraCommand("STARTEXP",
                                         std::bind(static_cast<void(CAM::*)()>
                                                   (&CAM::startExp), this) )
@@ -53,7 +70,7 @@ public:
                       );
     }
 
-    ~CAM() {delete _cameraFeatureValue;}
+//    ~CAM() {delete _cameraFeatureValue;}
 
     void startExp() {}
 
@@ -78,11 +95,11 @@ int main()
 
     cam("STARTEXP");
 
-//    int a = cam["A"];
+    int a = cam["A"];
 
 //    cam["A"] = 22;
 
-//    long aa = (int)cam["A"];
+    long aa = cam["A"];
 
 ////    double f = cam["A"];
 
@@ -90,6 +107,6 @@ int main()
 //    b = cam["A"];
 
 //    cout << "a = " << a << "\n";
-//    cout << "aa = " << aa << "\n";
+    cout << "aa = " << aa << "\n";
 ////    cout << "f = " << f << "\n";
 }
