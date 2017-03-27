@@ -17,6 +17,15 @@ protected:
 //    FP() = delete;
 //public:
     FP(CAM *cam = nullptr):_cam(cam) {}
+
+public:
+    template<typename T, typename = typename std::enable_if<std::is_arithmetic<T>::value>::type>
+    operator T() {
+        switch ( _cam->_cameraFeatureToAccess->type() ) {
+
+        }
+    }
+
 private:
     CAM *_cam;
 };
@@ -29,6 +38,7 @@ public:
     enum LID {cam, api, bl};
 
     CAM(ostream* ls): AbstractCamera(ls), _aa(10) {
+        _cameraFeatureValue = new FP(this);
         defineCommand(new CameraCommand("STARTEXP",
                                         std::bind(static_cast<void(CAM::*)()>
                                                   (&CAM::startExp), this) )
@@ -42,6 +52,8 @@ public:
                                              nullptr)
                       );
     }
+
+    ~CAM() {delete _cameraFeatureValue;}
 
     void startExp() {}
 
@@ -66,18 +78,18 @@ int main()
 
     cam("STARTEXP");
 
-    int a = cam["A"];
+//    int a = cam["A"];
 
-    cam["A"] = 22;
+//    cam["A"] = 22;
 
-    long aa = (int)cam["A"];
+//    long aa = (int)cam["A"];
 
-//    double f = cam["A"];
+////    double f = cam["A"];
 
-    int b;
-    b = cam["A"];
+//    int b;
+//    b = cam["A"];
 
-    cout << "a = " << a << "\n";
-    cout << "aa = " << aa << "\n";
-//    cout << "f = " << f << "\n";
+//    cout << "a = " << a << "\n";
+//    cout << "aa = " << aa << "\n";
+////    cout << "f = " << f << "\n";
 }
