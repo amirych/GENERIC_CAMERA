@@ -53,27 +53,24 @@ enum AbstractCameraError {Error_UnknownFeature, Error_FeatureIsReadOnly, Error_F
                           Error_UnknownCommand, Error_CommandExecFuncIsNULL,
                           Error_UninitializedCameraState};
 
-enum FeatureAccessType {ReadWrite_AccessType, ReadOnly_AccessType, WriteOnly_AccessType};
 
 
 template<typename FeatureTypeID,
          typename FeatureNameType,
-//         typename FeatureAccessKeyType,
          typename FeatureProxyType,
          typename CommandNameType,
-//         typename CommandAccessKeyType,
          typename LogStreamCharType,
          typename ... FeatureTypes>
 class AbstractCamera
 {
     friend FeatureProxyType;
 public:
+    enum FeatureAccessType {ReadWrite_AccessType, ReadOnly_AccessType, WriteOnly_AccessType};
+
     AbstractCamera(std::basic_ostream<LogStreamCharType> *log_stream = nullptr):
         _logStreamPtr(log_stream), _cameraFeatureToAccess(nullptr),
-//        _cameraFeatureValue(nullptr)
         _cameraFeatureValue(this)
     {
-//        _cameraFeatureValue = new FeatureProxyType(this);
     }
 
     virtual ~AbstractCamera() {}
@@ -142,6 +139,7 @@ protected:
         }
 
         virtual ~CameraFeature(){}
+
 
         T get() {
             if ( this->_accessType == WriteOnly_AccessType ) {
@@ -246,11 +244,6 @@ public:     /*  PUBLIC MEMBERS AND METHODS OF AbstractCamera CLASS (continue) */
                                           "Try to access feature of uninitialized camera");
         }
 
-//        if ( _cameraFeatureValue == nullptr ) {
-//            throw AbstractCameraException(Error_UninitializedCameraState,
-//                                          "Try to access feature of uninitialized camera");
-//        }
-
         auto search_result = _cameraFeatures.find(feature_name);
 
         if ( search_result == _cameraFeatures.end() ) {
@@ -259,7 +252,6 @@ public:     /*  PUBLIC MEMBERS AND METHODS OF AbstractCamera CLASS (continue) */
 
         _cameraFeatureToAccess = search_result->second.get();
 
-//        return *_cameraFeatureValue;
         return _cameraFeatureValue;
     }
 
@@ -273,7 +265,6 @@ protected:  /*  PROTECTED MEMBERS AND METHODS OF AbstractCamera CLASS */
         /*  features control members  */
 
     AbstractCameraFeature* _cameraFeatureToAccess;
-//    FeatureProxyType *_cameraFeatureValue;
     FeatureProxyType _cameraFeatureValue;
 
     camera_feature_map_t _cameraFeatures;
@@ -298,32 +289,12 @@ protected:  /*  PROTECTED MEMBERS AND METHODS OF AbstractCamera CLASS */
 
     template<typename T>
     void logHelper(T arg) {
-        *_logStreamPtr << arg;
+        *_logStreamPtr << arg << std::flush;
     }
 
     void logHelper(){}
 
 };
-
-//// macro to use in CPP-files for generic specialization
-//#define ABS_CAM_MACRO(arg) \
-//template<typename FeatureTypeID, \
-//    typename FeatureNameType, \
-//    typename FeatureAccessKeyType, \
-//    typename FeatureProxyType, \
-//    typename CommandNameType, \
-//    typename CommandAccessKeyType, \
-//    typename LogStreamCharType, \
-//    typename ... FeatureTypes> \
-//    arg AbstractCamera<FeatureTypeID, \
-//                       FeatureNameType, \
-//                       FeatureAccessKeyType, \
-//                       FeatureProxyType, \
-//                       CommandNameType, \
-//                       CommandAccessKeyType, \
-//                       LogStreamCharType, \
-//                       FeatureTypes ...>
-
 
 
                         /*********************************************************

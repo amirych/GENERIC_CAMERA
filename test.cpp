@@ -43,6 +43,11 @@ public:
         }
     }
 
+    operator std::string() {
+        AC::CameraFeature<std::string> *f = dynamic_cast<AC::CameraFeature<std::string>*>(_cam->_cameraFeatureToAccess);
+        return f->get();
+    }
+
 private:
 //    CAM *_cam;
     AC *_cam;
@@ -54,7 +59,7 @@ class CAM: public AC
 public:
     enum LID {cam, api, bl};
 
-    CAM(ostream* ls): AbstractCamera(ls), _aa(10) {
+    CAM(ostream* ls): AbstractCamera(ls), _aa(10), _ss("AAA") {
 //        _cameraFeatureValue = new FP(this);
         defineCommand(new CameraCommand("STARTEXP",
                                         std::bind(static_cast<void(CAM::*)()>
@@ -68,6 +73,11 @@ public:
                                                        (&CAM::set_a), this, std::placeholders::_1),
                                              nullptr)
                       );
+
+        defineFeature( new CameraFeature<std::string>("S",STRTYPE,ReadWrite_AccessType,{"A","B","C"},
+                                                      [this](){return _ss;},
+                                                      [this](const std::string s){_ss = s;})
+                     );
     }
 
 //    ~CAM() {delete _cameraFeatureValue;}
@@ -87,6 +97,7 @@ protected:
     void set_a(const int a) {_aa = a;}
 
     int _aa;
+    std::string _ss;
 };
 
 int main()
@@ -101,6 +112,11 @@ int main()
 
     long aa = cam["A"];
 
+    std::string ss = cam["S"];
+
+    cam.logToFile(CAM::api, "ZZZZZ: SSSSS\n");
+
+
 ////    double f = cam["A"];
 
 //    int b;
@@ -108,5 +124,7 @@ int main()
 
 //    cout << "a = " << a << "\n";
     cout << "aa = " << aa << "\n";
+    cout << "ss = " << ss << "\n";
+
 ////    cout << "f = " << f << "\n";
 }
